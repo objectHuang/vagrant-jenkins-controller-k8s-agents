@@ -1,0 +1,62 @@
+---
+# ServiceAccount for Jenkins
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: jenkins
+  namespace: jenkins
+---
+# ClusterRole for Jenkins to manage pods
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: jenkins-admin
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+      - pods/exec
+      - pods/log
+      - persistentvolumeclaims
+      - events
+      - configmaps
+      - secrets
+      - services
+    verbs: ["*"]
+  - apiGroups: ["apps"]
+    resources:
+      - deployments
+      - replicasets
+    verbs: ["*"]
+  - apiGroups: [""]
+    resources:
+      - nodes
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources:
+      - namespaces
+    verbs: ["get", "list", "watch"]
+---
+# ClusterRoleBinding for Jenkins
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: jenkins-admin-binding
+subjects:
+  - kind: ServiceAccount
+    name: jenkins
+    namespace: jenkins
+roleRef:
+  kind: ClusterRole
+  name: jenkins-admin
+  apiGroup: rbac.authorization.k8s.io
+---
+# Secret for Jenkins ServiceAccount token
+apiVersion: v1
+kind: Secret
+metadata:
+  name: jenkins-token
+  namespace: jenkins
+  annotations:
+    kubernetes.io/service-account.name: jenkins
+type: kubernetes.io/service-account-token

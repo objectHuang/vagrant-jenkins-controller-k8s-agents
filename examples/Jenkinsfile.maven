@@ -1,0 +1,96 @@
+// Example Jenkinsfile for Maven builds on Kubernetes
+// This pipeline builds a Maven project using a Kubernetes agent
+
+pipeline {
+    agent {
+        kubernetes {
+            yaml '''
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    jenkins: agent
+    type: maven
+spec:
+  containers:
+  - name: jnlp
+    image: jenkins/inbound-agent:latest
+    args: ['$(JENKINS_SECRET)', '$(JENKINS_NAME)']
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "250m"
+  - name: maven
+    image: maven:3.9-eclipse-temurin-17
+    command:
+    - cat
+    tty: true
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+    volumeMounts:
+    - name: maven-cache
+      mountPath: /root/.m2
+  volumes:
+  - name: maven-cache
+    emptyDir: {}
+'''
+            defaultContainer 'maven'
+        }
+    }
+    
+    environment {
+        MAVEN_OPTS = '-Xmx1024m'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                // Replace with your actual repository
+                git branch: 'main', 
+                    url: 'https://github.com/spring-projects/spring-petclinic.git'
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                sh 'mvn clean compile -DskipTests'
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                sh 'mvn test'
+            }
+            post {
+                always {
+                    junit '**/target/surefire-reports/*.xml'
+                }
+            }
+        }
+        
+        stage('Package') {
+            steps {
+                sh 'mvn package -DskipTests'
+            }
+            post {
+                success {
+                    archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo 'Maven build completed!'
+        }
+    }
+}

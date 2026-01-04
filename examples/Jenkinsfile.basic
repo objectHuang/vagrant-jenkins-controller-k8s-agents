@@ -1,0 +1,92 @@
+// Example Jenkinsfile for testing Kubernetes agents
+// This pipeline demonstrates running builds on Kubernetes agents
+
+pipeline {
+    agent {
+        kubernetes {
+            yaml '''
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    jenkins: agent
+spec:
+  containers:
+  - name: jnlp
+    image: jenkins/inbound-agent:latest
+    args: ['$(JENKINS_SECRET)', '$(JENKINS_NAME)']
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
+  - name: shell
+    image: ubuntu:22.04
+    command:
+    - cat
+    tty: true
+'''
+            defaultContainer 'shell'
+        }
+    }
+    
+    stages {
+        stage('System Info') {
+            steps {
+                sh '''
+                    echo "=== System Information ==="
+                    echo "Hostname: $(hostname)"
+                    echo "User: $(whoami)"
+                    echo "Working Directory: $(pwd)"
+                    cat /etc/os-release
+                '''
+            }
+        }
+        
+        stage('Environment Check') {
+            steps {
+                sh '''
+                    echo "=== Environment Variables ==="
+                    env | sort
+                '''
+            }
+        }
+        
+        stage('Network Test') {
+            steps {
+                sh '''
+                    echo "=== Network Information ==="
+                    hostname -I || echo "hostname -I not available"
+                    cat /etc/hosts
+                '''
+            }
+        }
+        
+        stage('Build Simulation') {
+            steps {
+                sh '''
+                    echo "=== Simulating Build Process ==="
+                    for i in 1 2 3 4 5; do
+                        echo "Build step $i..."
+                        sleep 2
+                    done
+                    echo "Build completed successfully!"
+                '''
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo 'Pipeline completed!'
+        }
+        success {
+            echo 'Pipeline succeeded!'
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
+    }
+}

@@ -1,0 +1,183 @@
+---
+# Jenkins Agent Pod Template - Base JNLP Agent
+# This is a ConfigMap containing pod template configuration for Jenkins Kubernetes plugin
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jenkins-agent-pod-template
+  namespace: jenkins
+data:
+  pod-template.yaml: |
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      labels:
+        jenkins: agent
+    spec:
+      serviceAccountName: jenkins
+      containers:
+        - name: jnlp
+          image: jenkins/inbound-agent:latest
+          args: ['$(JENKINS_SECRET)', '$(JENKINS_NAME)']
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          volumeMounts:
+            - name: workspace-volume
+              mountPath: /home/jenkins/agent
+      volumes:
+        - name: workspace-volume
+          emptyDir: {}
+---
+# Jenkins Agent Pod Template - Maven Builder
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jenkins-agent-maven-template
+  namespace: jenkins
+data:
+  pod-template.yaml: |
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      labels:
+        jenkins: agent
+        type: maven
+    spec:
+      serviceAccountName: jenkins
+      containers:
+        - name: jnlp
+          image: jenkins/inbound-agent:latest
+          args: ['$(JENKINS_SECRET)', '$(JENKINS_NAME)']
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "250m"
+        - name: maven
+          image: maven:3.9-eclipse-temurin-17
+          command:
+            - cat
+          tty: true
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          volumeMounts:
+            - name: workspace-volume
+              mountPath: /home/jenkins/agent
+            - name: maven-cache
+              mountPath: /root/.m2
+      volumes:
+        - name: workspace-volume
+          emptyDir: {}
+        - name: maven-cache
+          emptyDir: {}
+---
+# Jenkins Agent Pod Template - Docker Builder
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jenkins-agent-docker-template
+  namespace: jenkins
+data:
+  pod-template.yaml: |
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      labels:
+        jenkins: agent
+        type: docker
+    spec:
+      serviceAccountName: jenkins
+      containers:
+        - name: jnlp
+          image: jenkins/inbound-agent:latest
+          args: ['$(JENKINS_SECRET)', '$(JENKINS_NAME)']
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "250m"
+        - name: docker
+          image: docker:24-dind
+          securityContext:
+            privileged: true
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          volumeMounts:
+            - name: workspace-volume
+              mountPath: /home/jenkins/agent
+            - name: docker-graph-storage
+              mountPath: /var/lib/docker
+      volumes:
+        - name: workspace-volume
+          emptyDir: {}
+        - name: docker-graph-storage
+          emptyDir: {}
+---
+# Jenkins Agent Pod Template - Node.js Builder
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jenkins-agent-nodejs-template
+  namespace: jenkins
+data:
+  pod-template.yaml: |
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      labels:
+        jenkins: agent
+        type: nodejs
+    spec:
+      serviceAccountName: jenkins
+      containers:
+        - name: jnlp
+          image: jenkins/inbound-agent:latest
+          args: ['$(JENKINS_SECRET)', '$(JENKINS_NAME)']
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "250m"
+        - name: nodejs
+          image: node:20-alpine
+          command:
+            - cat
+          tty: true
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          volumeMounts:
+            - name: workspace-volume
+              mountPath: /home/jenkins/agent
+            - name: npm-cache
+              mountPath: /root/.npm
+      volumes:
+        - name: workspace-volume
+          emptyDir: {}
+        - name: npm-cache
+          emptyDir: {}

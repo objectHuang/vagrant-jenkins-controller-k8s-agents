@@ -1,0 +1,9 @@
+---
+# Namespace for Jenkins agents
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: jenkins
+  labels:
+    name: jenkins
+    purpose: jenkins-agents
